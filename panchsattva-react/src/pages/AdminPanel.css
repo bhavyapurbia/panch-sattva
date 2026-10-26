@@ -1,0 +1,57 @@
+.admin-page { min-height: 100vh; padding-top: 72px; }
+.admin-layout { display: grid; grid-template-columns: 260px 1fr; min-height: calc(100vh - 72px); }
+.admin-sidebar { background: var(--dark); padding: 28px 16px; }
+.admin-brand { display: flex; align-items: center; gap: 12px; margin-bottom: 32px; }
+.admin-brand img { width: 44px; height: 44px; border-radius: 50%; object-fit: cover; }
+.admin-brand h3 { font-family: var(--font-serif); font-size: 15px; color: var(--gold); }
+.admin-brand p { font-size: 11px; color: rgba(255,255,255,0.4); }
+.admin-sidebar nav { display: flex; flex-direction: column; gap: 4px; }
+.admin-sidebar nav button, .admin-sidebar nav a {
+  display: block; width: 100%; text-align: left;
+  padding: 12px 14px; background: none; border: none;
+  color: rgba(255,255,255,0.7); font-size: 14px; border-radius: 8px;
+  transition: var(--transition); cursor: pointer;
+}
+.admin-sidebar nav button:hover { background: rgba(255,255,255,0.08); color: #fff; }
+.admin-sidebar nav button.active { background: var(--crimson); color: #fff; }
+.admin-sidebar nav hr { border-color: rgba(255,255,255,0.1); margin: 12px 0; }
+
+.admin-content { padding: 28px; background: var(--bg); }
+.admin-topbar { margin-bottom: 24px; }
+.admin-topbar h2 { font-family: var(--font-serif); font-size: 26px; color: var(--crimson); }
+
+.admin-stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; }
+.admin-stat-card { background: #fff; border-radius: var(--radius); padding: 24px; display: flex; align-items: center; gap: 16px; box-shadow: var(--shadow); }
+.stat-icon { font-size: 32px; color: var(--gold); }
+.admin-stat-card strong { display: block; font-family: var(--font-serif); font-size: 24px; color: var(--crimson); }
+.admin-stat-card span { font-size: 13px; color: var(--muted); }
+.recent-orders-preview { grid-column: 1 / -1; background: #fff; border-radius: var(--radius); padding: 24px; box-shadow: var(--shadow); margin-top: 8px; }
+.recent-orders-preview h3 { font-family: var(--font-serif); color: var(--crimson); margin-bottom: 16px; }
+
+.admin-table-wrap { overflow-x: auto; background: #fff; border-radius: var(--radius); box-shadow: var(--shadow); }
+.admin-table { width: 100%; border-collapse: collapse; }
+.admin-table th { background: var(--dark); color: var(--gold); font-family: var(--font-serif); font-size: 12px; letter-spacing: 1px; padding: 14px 16px; text-align: left; }
+.admin-table td { padding: 14px 16px; border-bottom: 1px solid var(--border); font-size: 14px; vertical-align: middle; }
+.admin-table tr:hover td { background: var(--gold-light); }
+.admin-table select { padding: 6px 10px; border: 1.5px solid var(--border); border-radius: 6px; font-size: 13px; }
+.status-pill, .payment-pill { padding: 3px 10px; border-radius: 12px; font-size: 11px; font-weight: 700; text-transform: uppercase; color: #fff; }
+.status-pill.placed { background: #f59e0b; } .status-pill.confirmed { background: #3b82f6; }
+.status-pill.processing { background: #8b5cf6; } .status-pill.shipped { background: #06b6d4; }
+.status-pill.delivered { background: #16a34a; } .status-pill.cancelled { background: #ef4444; }
+.payment-pill.paid { background: #16a34a; } .payment-pill.pending { background: #f59e0b; } .payment-pill.failed { background: #ef4444; }
+.icon-btn { background: none; border: none; padding: 8px; border-radius: 6px; cursor: pointer; font-size: 16px; transition: var(--transition); }
+.icon-btn.edit { color: #3b82f6; } .icon-btn.edit:hover { background: #dbeafe; }
+.icon-btn.del { color: #ef4444; } .icon-btn.del:hover { background: #fee2e2; }
+.add-btn { margin-bottom: 16px; display: flex; align-items: center; gap: 8px; }
+
+/* Modal */
+.modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.6); z-index: 3000; display: flex; align-items: center; justify-content: center; padding: 20px; backdrop-filter: blur(4px); }
+.modal { background: #fff; border-radius: 16px; padding: 32px; width: 100%; max-width: 600px; max-height: 90vh; overflow-y: auto; }
+.modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; }
+.modal-header h3 { font-family: var(--font-serif); font-size: 22px; color: var(--crimson); }
+.modal-header button { background: none; border: none; font-size: 20px; color: var(--muted); cursor: pointer; }
+
+@media (max-width: 900px) {
+  .admin-layout { grid-template-columns: 1fr; }
+  .admin-stats { grid-template-columns: 1fr 1fr; }
+}

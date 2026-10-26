@@ -1,0 +1,44 @@
+.success-page { padding: 100px 24px 80px; display: flex; justify-content: center; }
+.success-card {
+  background: #fff; border-radius: 20px; box-shadow: var(--shadow-hover);
+  padding: 48px; max-width: 660px; width: 100%; text-align: center;
+}
+.success-icon { font-size: 72px; color: #16a34a; margin-bottom: 20px; animation: popIn 0.6s ease; }
+.success-card h1 { font-family: var(--font-serif); font-size: 36px; color: var(--crimson); margin-bottom: 12px; }
+.success-sub { color: var(--muted); font-size: 16px; margin-bottom: 32px; line-height: 1.7; }
+.order-info {
+  background: var(--gold-light); border-radius: 12px; padding: 24px;
+  display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 24px; text-align: left;
+}
+.order-info div { display: flex; flex-direction: column; gap: 4px; }
+.order-info span { font-size: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: 1px; }
+.order-info strong { font-size: 15px; color: var(--text); }
+.status-badge { background: var(--crimson); color: #fff; padding: 2px 10px; border-radius: 12px; font-size: 12px; }
+.shipping-info { text-align: left; background: #f9fafb; border-radius: 10px; padding: 20px; margin-bottom: 24px; }
+.shipping-info h3 { font-family: var(--font-serif); color: var(--crimson); margin-bottom: 12px; }
+.shipping-info p { font-size: 14px; color: var(--text); margin-bottom: 4px; }
+.order-items-list { text-align: left; margin-bottom: 28px; }
+.order-items-list h3 { font-family: var(--font-serif); color: var(--crimson); margin-bottom: 16px; }
+.success-item {
+  display: flex; align-items: center; gap: 14px; padding: 10px 0;
+  border-bottom: 1px solid var(--border);
+}
+.success-item img { width: 56px; height: 56px; border-radius: 8px; object-fit: cover; }
+.success-item p { font-size: 14px; font-weight: 600; }
+.success-item small { font-size: 12px; color: var(--muted); }
+
+.tracking-steps {
+  display: flex; align-items: center; justify-content: center;
+  gap: 0; margin: 32px 0;
+}
+.step { display: flex; flex-direction: column; align-items: center; gap: 6px; }
+.step svg { font-size: 28px; color: var(--border); }
+.step.done svg { color: #16a34a; }
+.step span { font-size: 12px; color: var(--muted); }
+.step-line { flex: 1; height: 2px; background: var(--border); min-width: 40px; max-width: 80px; }
+
+.success-actions { display: flex; gap: 16px; justify-content: center; flex-wrap: wrap; margin-top: 8px; }
+.success-actions a { min-width: 180px; padding: 14px 24px; }
+
+@keyframes popIn { from { transform: scale(0); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+@media (max-width: 500px) { .order-info { grid-template-columns: 1fr; } }
