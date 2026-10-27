@@ -13,3 +13,4 @@
     "install:all": "npm --prefix panchsattva-react install && npm --prefix panchsattva-server install && npm --prefix YouPI-PG install"
   }
 }
+
