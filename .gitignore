@@ -44,3 +44,14 @@ Desktop.ini
 # Temporary files
 *.tmp
 *.temp
+
+# Databases and Local Gateway State
+**/data/*.sqlite*
+**/data/*.db*
+**/data/browser-sessions/
+**/data/berry_auth/
+**/data/test_berry_auth/
+**/data/backups/
+**/data/.secrets/
+**/.berry-sessions/
+!**/data/.gitkeep

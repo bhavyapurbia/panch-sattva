@@ -1,0 +1,15 @@
+{
+  "name": "panch-sattva",
+  "version": "1.0.0",
+  "description": "Panch Sattva Luxury E-Commerce Suite with Integrated YOUPI PG Gateway",
+  "private": true,
+  "scripts": {
+    "dev": "powershell -ExecutionPolicy Bypass -File ./start-dev.ps1",
+    "dev:client": "npm --prefix panchsattva-react run dev",
+    "dev:server": "npm --prefix panchsattva-server run dev",
+    "dev:gateway": "node YouPI-PG/scripts/start.js",
+    "build": "npm --prefix panchsattva-react run build",
+    "test:integration": "node panchsattva-server/scripts/test-youpi-integration.js",
+    "install:all": "npm --prefix panchsattva-react install && npm --prefix panchsattva-server install && npm --prefix YouPI-PG install"
+  }
+}
