@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useCartStore, useAuthStore } from '../store';
 import { INDIA_LOCATIONS } from '../data/locations';
-import { ordersAPI, couponsAPI } from '../api';
+import { ordersAPI, couponsAPI, youpiAPI } from '../api';
 import toast from 'react-hot-toast';
 
 export default function Checkout() {
@@ -31,7 +31,7 @@ export default function Checkout() {
   const [showCouponsList, setShowCouponsList] = useState(false);
 
   // Payment Selection: 'online' (Full Online with 5% Discount) or 'cod' (Cash on Delivery with ₹99 advance)
-  const [paymentMethodMode, setPaymentMethodMode] = useState('online');
+  const [paymentMethodMode, setPaymentMethodMode] = useState('youpi');
 
   // Payment transfer tabs: 'qr' | 'upi' | 'bank'
   const [activePaymentTab, setActivePaymentTab] = useState('qr');
@@ -85,20 +85,21 @@ export default function Checkout() {
   // Base grand total before extra payment mode discount
   const baseGrandTotal = Math.max(0, subtotal + gst - discount);
 
-  // 5% Online Payment Discount
+  // 5% Online Payment Discount (applied to both YOUPI UPI and manual online prepaid)
+  const isOnlinePayment = paymentMethodMode === 'youpi' || paymentMethodMode === 'online';
   const onlineDiscount =
-    paymentMethodMode === 'online' ? Math.round(baseGrandTotal * 0.05) : 0;
+    isOnlinePayment ? Math.round(baseGrandTotal * 0.05) : 0;
 
   // Final total amount
   const finalTotalAmount = Math.max(0, baseGrandTotal - onlineDiscount);
 
   // Advance paid online now
   const amountToPayNow =
-    paymentMethodMode === 'online' ? finalTotalAmount : ADVANCE_FEE;
+    isOnlinePayment ? finalTotalAmount : ADVANCE_FEE;
 
   // Balance due upon delivery
   const codBalance =
-    paymentMethodMode === 'online'
+    isOnlinePayment
       ? 0
       : Math.max(0, finalTotalAmount - ADVANCE_FEE);
 
@@ -244,7 +245,96 @@ export default function Checkout() {
     return true;
   };
 
-  // Submit and Confirm Order
+  // ─── YOUPI PG Payment Session Initiation ─────────────────────────────────
+  const handleYoupiCheckout = async (e) => {
+    if (e && e.preventDefault) e.preventDefault();
+
+    if (cart.items.length === 0) {
+      toast.error('Your cart is empty');
+      navigate('/products');
+      return;
+    }
+
+    if (!validateForm()) return;
+
+    // Validate client-side stock availability
+    for (const item of cart.items) {
+      const stock = item.stock !== undefined ? Number(item.stock) : 10;
+      if (stock <= 0) {
+        toast.error(`"${item.name}" is out of stock! Please remove it from your cart.`);
+        return;
+      }
+      if (item.quantity > stock) {
+        toast.error(`Only ${stock} units available for "${item.name}". Please update your cart.`);
+        return;
+      }
+    }
+
+    setProcessing(true);
+
+    try {
+      const payload = {
+        items: cart.items.map((i) => ({
+          id: i.id || i._id,
+          productId: i.productId || i.id || i._id,
+          name: i.name,
+          price: Number(i.price),
+          image: i.image,
+          quantity: Number(i.quantity) || 1,
+          size: i.size || '-',
+          variant: i.variant || '',
+          isHamper: Boolean(i.isHamper),
+          hamperData: i.hamperData || null
+        })),
+        shippingAddress: {
+          fullName: formData.fullname.trim(),
+          name: formData.fullname.trim(),
+          phone: formData.mobile.replace(/\D/g, ''),
+          mobile: formData.mobile.replace(/\D/g, ''),
+          email: formData.email.trim(),
+          address: formData.address.trim(),
+          city: formData.city,
+          state: formData.state,
+          pincode: formData.pincode.trim()
+        },
+        couponCode: cart.appliedCoupon ? cart.appliedCoupon.code : null
+      };
+
+      const res = await youpiAPI.createSession(payload);
+      const { checkoutUrl, orderId } = res.data;
+
+      // Cache pending order metadata for returning customer preview
+      try {
+        localStorage.setItem(
+          'lastOrder',
+          JSON.stringify({
+            orderId,
+            date: new Date().toLocaleDateString('en-IN', {
+              day: '2-digit',
+              month: 'short',
+              year: 'numeric'
+            }),
+            customer: payload.shippingAddress,
+            items: cart.items,
+            total: finalTotalAmount,
+            paymentMode: 'YOUPI UPI (5% Discount Applied)',
+            isPrepaid: true,
+            createdAt: new Date().toISOString()
+          })
+        );
+      } catch (storageErr) {}
+
+      toast.success('Redirecting to secure YOUPI PG checkout...');
+      window.location.href = checkoutUrl;
+    } catch (err) {
+      console.error('YOUPI checkout initiation error:', err);
+      const msg = err.response?.data?.message || 'Could not initiate payment session with YOUPI PG. Please try again.';
+      toast.error(msg);
+      setProcessing(false);
+    }
+  };
+
+  // Submit and Confirm Order (COD and Manual Screenshot Transfer)
   const handleConfirmOrder = async (e) => {
     if (e && e.preventDefault) e.preventDefault();
 
@@ -463,7 +553,7 @@ export default function Checkout() {
           <div className="checkout-form">
             <h2>1. Billing & Delivery Details</h2>
 
-            <form id="checkoutForm" onSubmit={handleConfirmOrder}>
+            <form id="checkoutForm" onSubmit={paymentMethodMode === 'youpi' ? handleYoupiCheckout : handleConfirmOrder}>
               <div className="form-group">
                 <label htmlFor="fullname">Full Name *</label>
                 <input
@@ -577,22 +667,22 @@ export default function Checkout() {
                     gap: '12px'
                   }}
                 >
-                  {/* OPTION 1: FULL ONLINE PAYMENT (5% DISCOUNT) */}
+                  {/* OPTION 1: PAY WITH UPI (YOUPI PG) - RECOMMENDED */}
                   <div
-                    onClick={() => setPaymentMethodMode('online')}
+                    onClick={() => setPaymentMethodMode('youpi')}
                     style={{
                       border:
-                        paymentMethodMode === 'online'
+                        paymentMethodMode === 'youpi'
                           ? '2px solid #16a34a'
                           : '1.5px solid #ebd7be',
-                      background: paymentMethodMode === 'online' ? '#f0fdf4' : '#faf8f5',
+                      background: paymentMethodMode === 'youpi' ? '#f0fdf4' : '#faf8f5',
                       borderRadius: '12px',
                       padding: '14px 16px',
                       cursor: 'pointer',
                       transition: 'all 0.2s ease',
                       boxShadow:
-                        paymentMethodMode === 'online'
-                          ? '0 4px 14px rgba(22, 163, 74, 0.12)'
+                        paymentMethodMode === 'youpi'
+                          ? '0 4px 14px rgba(22, 163, 74, 0.16)'
                           : 'none'
                     }}
                   >
@@ -608,8 +698,8 @@ export default function Checkout() {
                         <input
                           type="radio"
                           name="paymentModeRadio"
-                          checked={paymentMethodMode === 'online'}
-                          onChange={() => setPaymentMethodMode('online')}
+                          checked={paymentMethodMode === 'youpi'}
+                          onChange={() => setPaymentMethodMode('youpi')}
                           style={{
                             accentColor: '#16a34a',
                             width: '16px',
@@ -618,7 +708,7 @@ export default function Checkout() {
                           }}
                         />
                         <strong style={{ fontSize: '14px', color: '#166534' }}>
-                          Full Online Payment
+                          Pay with UPI (YOUPI PG)
                         </strong>
                       </div>
                       <span
@@ -643,11 +733,7 @@ export default function Checkout() {
                         lineHeight: 1.45
                       }}
                     >
-                      Pay online in full & get an instant{' '}
-                      <strong>
-                        5% discount (-₹{Math.round(baseGrandTotal * 0.05).toLocaleString('en-IN')})
-                      </strong>
-                      . Zero balance to pay upon delivery!
+                      Instant QR & UPI App checkout (GPay, PhonePe, Paytm, BHIM, CRED). Zero transaction fees, automated bank verification!
                     </p>
                   </div>
 
@@ -720,7 +806,6 @@ export default function Checkout() {
                       {Math.max(0, baseGrandTotal - ADVANCE_FEE).toLocaleString('en-IN')} payable in
                       cash upon delivery.
                     </p>
-                    {/* NON-REFUNDABLE NOTICE IN VERY SMALL AND LIGHT FONT */}
                     <div
                       style={{
                         margin: '6px 0 0 24px',
@@ -734,13 +819,203 @@ export default function Checkout() {
                       * Note: On Cash on Delivery, the ₹99 advance confirmation fee is strictly non-refundable in the event of order cancellation.
                     </div>
                   </div>
+
+                  {/* OPTION 3: MANUAL SCREENSHOT TRANSFER */}
+                  <div
+                    onClick={() => setPaymentMethodMode('online')}
+                    style={{
+                      border:
+                        paymentMethodMode === 'online'
+                          ? '2px solid #b45309'
+                          : '1.5px solid #ebd7be',
+                      background: paymentMethodMode === 'online' ? '#fffbeb' : '#faf8f5',
+                      borderRadius: '12px',
+                      padding: '14px 16px',
+                      cursor: 'pointer',
+                      transition: 'all 0.2s ease',
+                      boxShadow:
+                        paymentMethodMode === 'online'
+                          ? '0 4px 14px rgba(180, 83, 9, 0.12)'
+                          : 'none'
+                    }}
+                  >
+                    <div
+                      style={{
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'center',
+                        marginBottom: '6px'
+                      }}
+                    >
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <input
+                          type="radio"
+                          name="paymentModeRadio"
+                          checked={paymentMethodMode === 'online'}
+                          onChange={() => setPaymentMethodMode('online')}
+                          style={{
+                            accentColor: '#b45309',
+                            width: '16px',
+                            height: '16px',
+                            cursor: 'pointer'
+                          }}
+                        />
+                        <strong style={{ fontSize: '14px', color: '#92400e' }}>
+                          Manual UPI / Bank Transfer
+                        </strong>
+                      </div>
+                      <span
+                        style={{
+                          background: '#b45309',
+                          color: '#fff',
+                          fontSize: '10.5px',
+                          fontWeight: '700',
+                          padding: '3px 8px',
+                          borderRadius: '12px'
+                        }}
+                      >
+                        5% OFF • WhatsApp SS
+                      </span>
+                    </div>
+                    <p
+                      style={{
+                        margin: '4px 0 0 24px',
+                        fontSize: '12px',
+                        color: '#78350f',
+                        lineHeight: 1.45
+                      }}
+                    >
+                      Transfer to store UPI ID/Bank account and upload screenshot manually for WhatsApp verification.
+                    </p>
+                  </div>
                 </div>
               </div>
 
               {/* ==============================================
                    PAYMENT TRANSFER CARD (QR, UPI, BANK)
               =============================================== */}
-              <div className="cod-gateway-section" style={{ marginTop: '10px' }}>
+              {paymentMethodMode === 'youpi' && (
+                <div
+                  style={{
+                    marginTop: '16px',
+                    background: '#f0fdf4',
+                    border: '2px solid #86efac',
+                    borderRadius: '16px',
+                    padding: '24px',
+                    boxShadow: '0 4px 16px rgba(22, 163, 74, 0.08)'
+                  }}
+                >
+                  <div
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      marginBottom: '14px',
+                      flexWrap: 'wrap',
+                      gap: '8px'
+                    }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                      <span
+                        style={{
+                          background: '#16a34a',
+                          color: '#fff',
+                          borderRadius: '50%',
+                          width: '32px',
+                          height: '32px',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          fontSize: '15px'
+                        }}
+                      >
+                        <i className="fa-solid fa-bolt"></i>
+                      </span>
+                      <div>
+                        <h3 style={{ margin: 0, fontSize: '16px', color: '#166534' }}>
+                          Instant UPI Payment (YOUPI PG)
+                        </h3>
+                        <span style={{ fontSize: '12px', color: '#15803d' }}>
+                          Direct Self-Hosted UPI Gateway • Zero Gateway Fees
+                        </span>
+                      </div>
+                    </div>
+                    <div style={{ textAlign: 'right' }}>
+                      <span style={{ fontSize: '12px', color: '#15803d', display: 'block' }}>
+                        Amount to Pay:
+                      </span>
+                      <strong style={{ fontSize: '18px', color: '#166534' }}>
+                        ₹{finalTotalAmount.toLocaleString('en-IN')}
+                      </strong>
+                    </div>
+                  </div>
+
+                  <div
+                    style={{
+                      background: '#ffffff',
+                      border: '1px solid #bbf7d0',
+                      borderRadius: '12px',
+                      padding: '16px',
+                      marginBottom: '18px',
+                      fontSize: '13px',
+                      color: '#374151',
+                      lineHeight: 1.6
+                    }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
+                      <i className="fa-solid fa-circle-check" style={{ color: '#16a34a' }}></i>
+                      <span>
+                        <strong>5% Instant Discount Applied:</strong> You save ₹
+                        {onlineDiscount.toLocaleString('en-IN')}!
+                      </span>
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
+                      <i className="fa-solid fa-qrcode" style={{ color: '#16a34a' }}></i>
+                      <span>
+                        <strong>Supported UPI Apps:</strong> Google Pay, PhonePe, Paytm, BHIM, CRED UPI & Banking Apps
+                      </span>
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <i className="fa-solid fa-shield-halved" style={{ color: '#16a34a' }}></i>
+                      <span>
+                        <strong>Automated Verification:</strong> No screenshot needed. Order is placed automatically upon payment.
+                      </span>
+                    </div>
+                  </div>
+
+                  <button
+                    type="button"
+                    id="btnPayWithYoupi"
+                    onClick={handleYoupiCheckout}
+                    disabled={processing}
+                    style={{
+                      width: '100%',
+                      background: 'linear-gradient(135deg, #15803d 0%, #166534 100%)',
+                      color: '#ffffff',
+                      border: 'none',
+                      borderRadius: '12px',
+                      padding: '16px 24px',
+                      fontSize: '16px',
+                      fontWeight: '700',
+                      cursor: processing ? 'not-allowed' : 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '10px',
+                      boxShadow: '0 6px 20px rgba(22, 101, 52, 0.25)',
+                      transition: 'all 0.2s ease'
+                    }}
+                  >
+                    <i className="fa-solid fa-bolt" style={{ color: '#fef08a' }}></i>
+                    {processing
+                      ? 'Connecting to YOUPI Payment Gateway...'
+                      : `Pay ₹${finalTotalAmount.toLocaleString('en-IN')} with UPI (YOUPI PG)`}
+                  </button>
+                </div>
+              )}
+
+              {paymentMethodMode !== 'youpi' && (
+                <div className="cod-gateway-section" style={{ marginTop: '10px' }}>
                 <div className="cod-gateway-card">
                   <div className="cod-header-row">
                     <div className="cod-title-wrap">
@@ -1080,6 +1355,7 @@ export default function Checkout() {
                   </div>
                 </div>
               </div>
+              )}
             </form>
           </div>
 

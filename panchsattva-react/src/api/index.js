@@ -127,10 +127,20 @@ export const ordersAPI = {
   cancel: (id) => api.put(`/orders/${id}/cancel`)
 };
 
-// ─── Payment API ──────────────────────────────────────────────────────────────
+// ─── Payment API (Razorpay — legacy) ──────────────────────────────────────────
 export const paymentAPI = {
   createOrder: (data) => api.post('/payment/create-order', data),
   verify: (data) => api.post('/payment/verify', data)
+};
+
+// ─── YOUPI PG Payment API ─────────────────────────────────────────────────────
+export const youpiAPI = {
+  // Creates a pending order in MongoDB and a YOUPI payment session.
+  // Returns { orderId, youpiPaymentId, checkoutUrl } — redirect to checkoutUrl.
+  createSession: (data) => api.post('/payment/youpi/create-session', data),
+  // Polls the backend for the current payment/order status.
+  // Returns { orderId, paymentStatus, orderStatus, youpiEvent, ... }
+  getStatus: (orderId) => api.get(`/payment/youpi/status/${orderId}`)
 };
 
 // ─── Cart API (server-side sync) ──────────────────────────────────────────────

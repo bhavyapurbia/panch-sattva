@@ -36,7 +36,13 @@ if (process.env.NODE_ENV !== 'test') {
 }
 
 // ─── Body Parsers ─────────────────────────────────────────────────────────────
-app.use(express.json({ limit: '50mb' }));
+// verify captures the exact raw buffer for HMAC-SHA256 signature verification
+app.use(express.json({
+  limit: '50mb',
+  verify: (req, res, buf) => {
+    req.rawBody = buf;
+  }
+}));
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
 // ─── Global Rate Limiter ──────────────────────────────────────────────────────
@@ -74,6 +80,12 @@ app.use('/api/products', require('./routes/products'));
 app.use('/api/orders', require('./routes/orders'));
 app.use('/api/cart', require('./routes/cart'));
 app.use('/api/payment', require('./routes/payment'));
+app.use('/api/payment/youpi', require('./routes/youpiPayment'));
+// Support standard /api/webhook as an alias for the YOUPI PG webhook
+app.post('/api/webhook', (req, res, next) => {
+  req.url = '/webhook';
+  require('./routes/youpiPayment')(req, res, next);
+});
 app.use('/api/admin', require('./routes/admin'));
 app.use('/api/wishlist', require('./routes/wishlist'));
 app.use('/api/coupons', require('./routes/coupons'));

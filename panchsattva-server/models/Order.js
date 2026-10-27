@@ -42,7 +42,7 @@ const orderSchema = new mongoose.Schema({
   screenshotName: { type: String, default: '' },
   paymentStatus: {
     type: String,
-    enum: ['pending', 'paid', 'failed', 'refunded'],
+    enum: ['pending', 'paid', 'failed', 'refunded', 'observed'],
     default: 'pending'
   },
   orderStatus: {
@@ -53,6 +53,18 @@ const orderSchema = new mongoose.Schema({
   razorpayOrderId: String,
   razorpayPaymentId: String,
   razorpaySignature: String,
+  // ─── YOUPI PG Payment Fields ───────────────────────────────────────────────
+  paymentProvider: {
+    type: String,
+    enum: ['youpi', 'razorpay', 'manual', null],
+    default: null
+  },
+  youpiPaymentId: { type: String, default: null, index: true },       // YOUPI gateway payment session UUID
+  youpiDeliveryId: { type: String, default: null },      // Idempotency key: X-Gateway-Delivery-Id header
+  youpiEvent: { type: String, default: null },           // Last processed webhook event
+  paymentConfirmedAt: { type: Date, default: null },     // Set only on RECONCILED or COD SUCCESS
+  stockDeducted: { type: Boolean, default: false },      // Prevents duplicate stock deductions on duplicate webhooks
+  // ──────────────────────────────────────────────────────────────────────────
   notes: String,
   createdAt: { type: Date, default: Date.now }
 });

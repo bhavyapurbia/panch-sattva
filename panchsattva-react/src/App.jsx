@@ -15,6 +15,7 @@ import Signup from './pages/Signup';
 import Dashboard from './pages/Dashboard';
 import AdminPanel from './pages/AdminPanel';
 import CustomHamperBuilder from './pages/CustomHamperBuilder';
+import PaymentReturn from './pages/PaymentReturn';
 import './index.css';
 
 export default function App() {
@@ -78,6 +79,14 @@ export default function App() {
           />
           <Route path="/order-success/:orderId" element={<OrderSuccess />} />
           <Route path="/order-success" element={<OrderSuccess />} />
+          <Route
+            path="/payment/return"
+            element={
+              <ProtectedRoute>
+                <PaymentReturn />
+              </ProtectedRoute>
+            }
+          />
           <Route path="*" element={<Home />} />
         </Route>
       </Routes>
