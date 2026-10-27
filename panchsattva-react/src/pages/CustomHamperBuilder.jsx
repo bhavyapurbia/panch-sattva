@@ -206,10 +206,14 @@ export default function CustomHamperBuilder() {
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [completedHamperId, setCompletedHamperId] = useState(null);
 
-  // 2-second notification of adding chocolate in the hamper
+  // Mobile Hamper Drawer State (Bottom Sheet for MNC-grade mobile UX)
+  const [showMobileHamperDrawer, setShowMobileHamperDrawer] = useState(false);
+
+  // 2-second notification of adding chocolate in the hamper (Shown ONLY ONCE as requested)
   const [showChoc2sNotification, setShowChoc2sNotification] = useState(false);
   const [addedItemForChocNotif, setAddedItemForChocNotif] = useState(null);
   const chocNotifTimerRef = useRef(null);
+  const hasShownChocPromptRef = useRef(false);
 
   // Load Real Catalog Products & Hamper Configuration from Backend
   useEffect(() => {
@@ -365,11 +369,11 @@ export default function CustomHamperBuilder() {
 
     const isChoc = product.category === 'chocolates' || product.isChocolate || product.isCustomChocolate;
 
-    // 2-SECOND TOAST NOTIFICATION
     if (isChoc) {
       toast.success(`🍫 Added "${product.name}" to your hamper!`, {
-        id: 'hamper-choc-2s-toast',
+        id: 'hamper-choc-toast',
         duration: 2000,
+        position: 'top-center',
         style: {
           background: '#2b0008',
           color: '#fdf6e7',
@@ -382,30 +386,34 @@ export default function CustomHamperBuilder() {
         }
       });
     } else {
-      toast(`✨ Added "${product.name}"! You can also add chocolates in the hamper (optional) 🍫`, {
-        id: 'hamper-choc-suggest-toast',
-        duration: 2000,
-        icon: '🍫',
+      // Standard item added confirmation toast
+      toast.success(`✨ Added "${product.name}" to hamper!`, {
+        id: 'hamper-add-toast',
+        duration: 1800,
+        position: 'top-center',
         style: {
           background: '#2b0008',
           color: '#fdf6e7',
           border: '1.5px solid #c5a059',
           fontSize: '13.5px',
-          padding: '12px 18px',
+          padding: '10px 16px',
           borderRadius: '10px',
           fontWeight: '600',
           boxShadow: '0 6px 20px rgba(0,0,0,0.3)'
         }
       });
-    }
 
-    // 2-SECOND FLOATING BANNER NOTIFICATION
-    setAddedItemForChocNotif(product);
-    setShowChoc2sNotification(true);
-    if (chocNotifTimerRef.current) clearTimeout(chocNotifTimerRef.current);
-    chocNotifTimerRef.current = setTimeout(() => {
-      setShowChoc2sNotification(false);
-    }, 2000); // Automatically dismiss after 2 seconds
+      // ONLY SHOWN ONE TIME: Prompt the user about adding optional chocolates once, never again on subsequent additions
+      if (!hasShownChocPromptRef.current) {
+        hasShownChocPromptRef.current = true;
+        setAddedItemForChocNotif(product);
+        setShowChoc2sNotification(true);
+        if (chocNotifTimerRef.current) clearTimeout(chocNotifTimerRef.current);
+        chocNotifTimerRef.current = setTimeout(() => {
+          setShowChoc2sNotification(false);
+        }, 3000); // Dismiss automatically
+      }
+    }
   };
 
   const handleDecreaseProduct = (productId) => {
@@ -798,35 +806,93 @@ export default function CustomHamperBuilder() {
                 </div>
               </div>
 
-              {/* Box Capacity Status Banner */}
-              <div className="hamper-capacity-banner">
-                <div className="capacity-info">
-                  <div className="capacity-icon">
-                    <i className="fa-solid fa-gift"></i>
+              {/* UNIFIED LUXURY HAMPER STATUS STRIP (MNC PATTERN - CLEAN & COMPACT) */}
+              <div className="hamper-status-strip">
+                <div className="status-strip-main">
+                  {/* Left: Selected Box Info & Capacity */}
+                  <div className="status-box-meta">
+                    <div className="status-box-icon">
+                      {selectedBox?.image ? (
+                        <img
+                          src={selectedBox.image}
+                          alt=""
+                          onError={(e) => { e.target.src = '/images/psimg/gift1.png'; }}
+                        />
+                      ) : (
+                        <i className="fa-solid fa-gift"></i>
+                      )}
+                    </div>
+                    <div className="status-box-texts">
+                      <div className="status-box-name-row">
+                        <span className="status-box-name">{selectedBox?.name || 'Keepsake Box'}</span>
+                        <button
+                          type="button"
+                          className="status-change-link"
+                          onClick={() => setCurrentStep(1)}
+                        >
+                          Change
+                        </button>
+                      </div>
+                      <div className="status-box-capacity-text">
+                        <span>{totalItemsCount} of {selectedBox?.capacity || 4} items</span>
+                        <span className="status-capacity-pct">{capacityPercent}% full</span>
+                      </div>
+                    </div>
                   </div>
-                  <div>
-                    <h4 className="capacity-title">{selectedBox?.name || 'Luxury Keepsake Box'}</h4>
-                    <p className="capacity-subtitle">
-                      Recommended capacity: {selectedBox?.capacity || 4} pieces • Currently: {totalItemsCount} items added
-                    </p>
-                  </div>
+
+                  {/* Right: View Hamper Button */}
+                  {selectedProducts.length > 0 && (
+                    <button
+                      type="button"
+                      className="btn-status-view-tray"
+                      onClick={() => setShowMobileHamperDrawer(true)}
+                    >
+                      <i className="fa-solid fa-gem"></i>
+                      <span>View Hamper ({totalItemsCount})</span>
+                    </button>
+                  )}
                 </div>
 
-                <div className="capacity-bar-wrap">
-                  <div className="capacity-bar-track">
-                    <div
-                      className="capacity-bar-fill"
-                      style={{
-                        width: `${capacityPercent}%`,
-                        background: capacityPercent >= 100 ? '#15803d' : 'linear-gradient(90deg, #c5a059, #800020)'
-                      }}
-                    ></div>
-                  </div>
-                  <div className="capacity-bar-label">
-                    <span>{totalItemsCount} of {selectedBox?.capacity || 4} items</span>
-                    <span>{capacityPercent}% filled</span>
-                  </div>
+                {/* Smooth Progress Track */}
+                <div className="status-progress-track">
+                  <div
+                    className="status-progress-fill"
+                    style={{
+                      width: `${Math.min(capacityPercent, 100)}%`,
+                      background: capacityPercent >= 100 ? '#15803d' : 'linear-gradient(90deg, #c5a059, #800020)'
+                    }}
+                  ></div>
                 </div>
+
+                {/* Live Added Items Rail (Only visible when items are added) */}
+                {selectedProducts.length > 0 && (
+                  <div className="status-items-rail">
+                    <span className="status-rail-label">Inside Box:</span>
+                    <div className="status-rail-scroll">
+                      {selectedProducts.map((p, idx) => {
+                        const prodId = p.productId || p.product?._id || p.product?.id;
+                        return (
+                          <div key={idx} className="status-rail-chip" title={`${p.product?.name} (x${p.quantity})`}>
+                            <img
+                              src={getValidImageUrl(p.product)}
+                              alt=""
+                              onError={(e) => { e.target.src = '/images/psimg/ring1.jpg'; }}
+                            />
+                            <span className="status-rail-qty">x{p.quantity}</span>
+                            <button
+                              type="button"
+                              className="status-rail-remove"
+                              onClick={() => handleRemoveProduct(prodId)}
+                              title="Remove item"
+                            >
+                              &times;
+                            </button>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
               </div>
 
               {/* Categories & Search Filter Bar */}
@@ -1697,60 +1763,379 @@ export default function CustomHamperBuilder() {
         </aside>
       </div>
 
-      {/* MOBILE STICKY BOTTOM BAR */}
+      {/* MOBILE STICKY BOTTOM BAR (MNC LUXURY APP PATTERN) */}
       <div className="hamper-mobile-bottom-bar">
         <div className="mobile-bar-content">
-          <div className="mobile-bar-total">
-            <span>Hamper ({totalItemsCount} items):</span>
-            <strong>₹{hamperTotalPrice.toLocaleString('en-IN')}</strong>
+          {/* Left Clickable Area to open Live Hamper Bottom Sheet */}
+          <div
+            className="mobile-bar-trigger"
+            onClick={() => setShowMobileHamperDrawer(true)}
+            role="button"
+            tabIndex={0}
+            title="Tap to view items inside your hamper"
+          >
+            {/* Overlapping Avatars of Selected Products */}
+            <div className="mobile-bar-avatars-wrap">
+              {selectedProducts.length > 0 ? (
+                selectedProducts.slice(0, 3).map((p, idx) => (
+                  <img
+                    key={idx}
+                    src={getValidImageUrl(p.product)}
+                    alt=""
+                    className="mobile-bar-avatar"
+                    style={{ zIndex: 4 - idx, transform: `translateX(-${idx * 9}px)` }}
+                    onError={(e) => { e.target.src = '/images/psimg/ring1.jpg'; }}
+                  />
+                ))
+              ) : selectedBox ? (
+                <img
+                  src={selectedBox.image || '/images/psimg/gift1.png'}
+                  alt=""
+                  className="mobile-bar-avatar single"
+                  onError={(e) => { e.target.src = '/images/psimg/gift1.png'; }}
+                />
+              ) : (
+                <div className="mobile-bar-avatar placeholder">🎁</div>
+              )}
+            </div>
+
+            <div className="mobile-bar-total">
+              <div className="mobile-bar-label-row">
+                <span>{totalItemsCount} {totalItemsCount === 1 ? 'item' : 'items'} in Hamper</span>
+                <span className="mobile-bar-view-pill">
+                  View <i className="fa-solid fa-chevron-up"></i>
+                </span>
+              </div>
+              <strong>₹{hamperTotalPrice.toLocaleString('en-IN')}</strong>
+            </div>
           </div>
 
+          {/* Right Action Button */}
           {currentStep === 1 && (
             <button
               type="button"
-              className="btn-builder-next"
-              style={{ width: 'auto', padding: '10px 20px' }}
+              className="btn-builder-next mobile-next-btn"
               onClick={handleProceedToStep2}
             >
-              Next: Items <i className="fa-solid fa-arrow-right"></i>
+              <span>Add Items</span>
+              <i className="fa-solid fa-arrow-right"></i>
             </button>
           )}
 
           {currentStep === 2 && (
             <button
               type="button"
-              className="btn-builder-next"
-              style={{ width: 'auto', padding: '10px 20px' }}
+              className="btn-builder-next mobile-next-btn"
               disabled={selectedProducts.length === 0}
               onClick={handleProceedToStep3}
             >
-              Next: Personalize <i className="fa-solid fa-arrow-right"></i>
+              <span>Personalize</span>
+              <i className="fa-solid fa-arrow-right"></i>
             </button>
           )}
 
           {currentStep === 3 && (
             <button
               type="button"
-              className="btn-builder-next"
-              style={{ width: 'auto', padding: '10px 20px' }}
+              className="btn-builder-next mobile-next-btn"
               onClick={handleProceedToStep4}
             >
-              Review <i className="fa-solid fa-arrow-right"></i>
+              <span>Review</span>
+              <i className="fa-solid fa-arrow-right"></i>
             </button>
           )}
 
           {currentStep === 4 && (
             <button
               type="button"
-              className="btn-builder-next"
-              style={{ width: 'auto', padding: '10px 20px' }}
+              className="btn-builder-next mobile-next-btn"
               onClick={handleAddHamperToCart}
             >
-              <i className="fa-solid fa-bag-shopping"></i> Add to Bag
+              <i className="fa-solid fa-bag-shopping"></i>
+              <span>Add to Bag</span>
             </button>
           )}
         </div>
       </div>
+
+      {/* MOBILE HAMPER DRAWER / BOTTOM SHEET MODAL */}
+      {showMobileHamperDrawer && (
+        <div
+          className="hamper-drawer-backdrop"
+          onClick={() => setShowMobileHamperDrawer(false)}
+        >
+          <div
+            className="hamper-drawer-sheet"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Drag handle */}
+            <div
+              className="hamper-drawer-handle-bar"
+              onClick={() => setShowMobileHamperDrawer(false)}
+            ></div>
+
+            {/* Header */}
+            <div className="hamper-drawer-header">
+              <div>
+                <span className="drawer-royal-tag">
+                  <i className="fa-solid fa-crown" style={{ color: '#c5a059' }}></i>
+                  PANCH SATTVA ROYAL HAMPER
+                </span>
+                <h3 className="drawer-title">
+                  Your Hamper Selection ({totalItemsCount} {totalItemsCount === 1 ? 'item' : 'items'})
+                </h3>
+              </div>
+              <button
+                type="button"
+                className="drawer-close-btn"
+                onClick={() => setShowMobileHamperDrawer(false)}
+                aria-label="Close drawer"
+              >
+                &times;
+              </button>
+            </div>
+
+            {/* Capacity Progress Bar */}
+            <div className="drawer-capacity-box">
+              <div className="drawer-capacity-row">
+                <span>Box: <strong>{selectedBox?.name || 'Keepsake Box'}</strong></span>
+                <span>{totalItemsCount} of {selectedBox?.capacity || 4} recommended</span>
+              </div>
+              <div className="drawer-capacity-track">
+                <div
+                  className="drawer-capacity-fill"
+                  style={{
+                    width: `${Math.min(capacityPercent, 100)}%`,
+                    background: capacityPercent >= 100 ? '#15803d' : 'linear-gradient(90deg, #c5a059, #800020)'
+                  }}
+                ></div>
+              </div>
+            </div>
+
+            {/* Scrollable Items Body */}
+            <div className="hamper-drawer-body">
+              {/* Selected Box Card */}
+              {selectedBox && (
+                <div className="drawer-box-item">
+                  <img
+                    src={selectedBox.image || '/images/psimg/gift1.png'}
+                    alt={selectedBox.name}
+                    className="drawer-item-img"
+                    onError={(e) => { e.target.src = '/images/psimg/gift1.png'; }}
+                  />
+                  <div className="drawer-item-details">
+                    <span className="drawer-item-cat">Packaging Box</span>
+                    <strong className="drawer-item-name">{selectedBox.name}</strong>
+                    <div className="drawer-item-price-row">
+                      <span className="drawer-item-price">₹{Number(selectedBox.price).toLocaleString('en-IN')}</span>
+                      <button
+                        type="button"
+                        className="drawer-change-box-btn"
+                        onClick={() => {
+                          setShowMobileHamperDrawer(false);
+                          setCurrentStep(1);
+                        }}
+                      >
+                        Change Box
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Section Header */}
+              <div className="drawer-section-heading">
+                <span>Treasures Added ({selectedProducts.length} unique)</span>
+                {selectedProducts.length > 0 && (
+                  <button
+                    type="button"
+                    className="drawer-clear-btn"
+                    onClick={() => {
+                      if (window.confirm('Remove all selected items from your hamper?')) {
+                        setSelectedProducts([]);
+                        toast('Hamper emptied', { icon: '🗑️' });
+                      }
+                    }}
+                  >
+                    Clear All
+                  </button>
+                )}
+              </div>
+
+              {/* Items List */}
+              {selectedProducts.length === 0 ? (
+                <div className="drawer-empty-state">
+                  <div className="drawer-empty-icon">🎁</div>
+                  <h4>No products in hamper yet</h4>
+                  <p>Browse our authentic handcrafted jewellery and optional chocolates, then tap <b>"+ Add to Box"</b>!</p>
+                  <button
+                    type="button"
+                    className="btn-drawer-add-items"
+                    onClick={() => {
+                      setShowMobileHamperDrawer(false);
+                      setCurrentStep(2);
+                    }}
+                  >
+                    <i className="fa-solid fa-gem" style={{ marginRight: '6px' }}></i> Browse Catalog
+                  </button>
+                </div>
+              ) : (
+                <div className="drawer-items-list">
+                  {selectedProducts.map((p, idx) => {
+                    const prodId = p.productId || p.product?._id || p.product?.id;
+                    const itemTotal = (Number(p.unitPrice || p.product?.price) || 0) * (Number(p.quantity) || 1);
+                    return (
+                      <div key={idx} className="drawer-product-row">
+                        <img
+                          src={getValidImageUrl(p.product)}
+                          alt={p.product?.name}
+                          className="drawer-item-img"
+                          onError={(e) => { e.target.src = '/images/psimg/ring1.jpg'; }}
+                        />
+                        <div className="drawer-item-details">
+                          <span className="drawer-item-cat">{p.product?.category || 'Jewellery'}</span>
+                          <strong className="drawer-item-name">{p.product?.name}</strong>
+                          <div className="drawer-item-price-row">
+                            <span className="drawer-item-price">₹{itemTotal.toLocaleString('en-IN')}</span>
+                            <span className="drawer-unit-price">
+                              (₹{Number(p.unitPrice || p.product?.price).toLocaleString('en-IN')} each)
+                            </span>
+                          </div>
+                        </div>
+
+                        <div className="drawer-item-controls">
+                          <button
+                            type="button"
+                            className="drawer-trash-btn"
+                            onClick={() => handleRemoveProduct(prodId)}
+                            title="Remove from hamper"
+                          >
+                            <i className="fa-solid fa-trash-can"></i>
+                          </button>
+
+                          <div className="drawer-qty-stepper">
+                            <button
+                              type="button"
+                              className="drawer-qty-btn"
+                              onClick={() => handleDecreaseProduct(prodId)}
+                              title="Decrease quantity"
+                            >
+                              <i className="fa-solid fa-minus"></i>
+                            </button>
+                            <span className="drawer-qty-num">{p.quantity}</span>
+                            <button
+                              type="button"
+                              className="drawer-qty-btn"
+                              onClick={() => handleAddProduct(p.product)}
+                              title="Add another"
+                            >
+                              <i className="fa-solid fa-plus"></i>
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+
+              {/* Complimentary Luxuries Strip */}
+              <div className="drawer-complimentary-box">
+                <div className="drawer-comp-item">
+                  <span className="drawer-comp-icon">🎀</span>
+                  <span>Royal Satin Ribbon & Gold Seal Included (₹0)</span>
+                </div>
+                <div className="drawer-comp-item">
+                  <span className="drawer-comp-icon">✉️</span>
+                  <span>Personalized Handwritten Greeting Card (₹0)</span>
+                </div>
+                <div className="drawer-comp-item">
+                  <span className="drawer-comp-icon">🛡️</span>
+                  <span>Insured Express Pan-India Delivery (FREE)</span>
+                </div>
+              </div>
+
+              {/* Cost Summary Breakdown */}
+              <div className="drawer-bill-summary">
+                <div className="drawer-bill-row">
+                  <span>Keepsake Box Price:</span>
+                  <span>₹{boxPrice.toLocaleString('en-IN')}</span>
+                </div>
+                <div className="drawer-bill-row">
+                  <span>Curated Treasures ({totalItemsCount} items):</span>
+                  <span>₹{productsSubtotal.toLocaleString('en-IN')}</span>
+                </div>
+                <div className="drawer-bill-row drawer-bill-total">
+                  <span>Total Hamper Value:</span>
+                  <strong>₹{hamperTotalPrice.toLocaleString('en-IN')}</strong>
+                </div>
+              </div>
+            </div>
+
+            {/* Drawer Footer CTA */}
+            <div className="hamper-drawer-footer">
+              <button
+                type="button"
+                className="drawer-footer-btn-secondary"
+                onClick={() => setShowMobileHamperDrawer(false)}
+              >
+                Keep Browsing
+              </button>
+
+              {currentStep === 1 ? (
+                <button
+                  type="button"
+                  className="drawer-footer-btn-primary"
+                  onClick={() => {
+                    setShowMobileHamperDrawer(false);
+                    handleProceedToStep2();
+                  }}
+                >
+                  <span>Add Products</span>
+                  <i className="fa-solid fa-arrow-right"></i>
+                </button>
+              ) : currentStep === 2 ? (
+                <button
+                  type="button"
+                  className="drawer-footer-btn-primary"
+                  disabled={selectedProducts.length === 0}
+                  onClick={() => {
+                    setShowMobileHamperDrawer(false);
+                    handleProceedToStep3();
+                  }}
+                >
+                  <span>Personalize Hamper ({totalItemsCount})</span>
+                  <i className="fa-solid fa-arrow-right"></i>
+                </button>
+              ) : currentStep === 3 ? (
+                <button
+                  type="button"
+                  className="drawer-footer-btn-primary"
+                  onClick={() => {
+                    setShowMobileHamperDrawer(false);
+                    handleProceedToStep4();
+                  }}
+                >
+                  <span>Review Hamper</span>
+                  <i className="fa-solid fa-arrow-right"></i>
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  className="drawer-footer-btn-primary"
+                  onClick={() => {
+                    setShowMobileHamperDrawer(false);
+                    handleAddHamperToCart();
+                  }}
+                >
+                  <i className="fa-solid fa-bag-shopping"></i>
+                  <span>Add Complete Hamper</span>
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* QUICK PRODUCT DETAIL MODAL */}
       {detailProduct && (
@@ -2117,13 +2502,13 @@ export default function CustomHamperBuilder() {
         </div>
       )}
 
-      {/* 2-SECOND NOTIFICATION OF ADDING CHOCOLATE IN HAMPER */}
+      {/* 2-SECOND NOTIFICATION OF ADDING CHOCOLATE IN HAMPER (POSITIONED AT UPPER SIDE) */}
       {showChoc2sNotification && (
         <div
           className="hamper-choc-notification-2s"
           style={{
             position: 'fixed',
-            bottom: '30px',
+            top: '85px',
             left: '50%',
             transform: 'translateX(-50%)',
             zIndex: 99999,
@@ -2131,11 +2516,11 @@ export default function CustomHamperBuilder() {
             border: '2px solid #c5a059',
             boxShadow: '0 8px 32px rgba(0, 0, 0, 0.45)',
             borderRadius: '50px',
-            padding: '12px 24px',
+            padding: '10px 20px',
             color: '#fff',
             display: 'flex',
             alignItems: 'center',
-            gap: '14px',
+            gap: '12px',
             animation: 'fadeInScale 0.25s ease-out',
             maxWidth: '92vw'
           }}
