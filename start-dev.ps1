@@ -4,8 +4,8 @@ Write-Host "✨ Starting Panch Sattva Luxury Suite + YOUPI Payment Gateway" -For
 Write-Host "============================================================" -ForegroundColor Cyan
 
 # 1. Start YOUPI Payment Gateway Services (Ports: 8090, 6100, 7000, 6001)
-Write-Host "[1/3] Launching YOUPI PG Gateway Supervisor..." -ForegroundColor White
-Start-Process powershell -ArgumentList "-NoExit -Command `"cd '$PSScriptRoot\YouPI-PG'; node scripts/start.js`"" -WindowStyle Normal
+Write-Host "[1/3] Launching YOUPI PG Gateway Supervisor (Dev/Localhost)..." -ForegroundColor White
+Start-Process powershell -ArgumentList "-NoExit -Command `"cd '$PSScriptRoot\YouPI-PG'; node scripts/dev.js`"" -WindowStyle Normal
 
 Start-Sleep -Seconds 2
 

@@ -140,7 +140,9 @@ export const youpiAPI = {
   createSession: (data) => api.post('/payment/youpi/create-session', data),
   // Polls the backend for the current payment/order status.
   // Returns { orderId, paymentStatus, orderStatus, youpiEvent, ... }
-  getStatus: (orderId) => api.get(`/payment/youpi/status/${orderId}`)
+  getStatus: (orderId) => api.get(`/payment/youpi/status/${orderId}`),
+  // Confirms direct UPI payment or sandbox test order
+  confirmDirect: (data) => api.post('/payment/youpi/confirm-direct', data)
 };
 
 // ─── Cart API (server-side sync) ──────────────────────────────────────────────

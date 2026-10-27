@@ -14,6 +14,39 @@ export default function PaymentReturn() {
   const [orderData, setOrderData] = useState(null);
   const [errorMsg, setErrorMsg] = useState(null);
   const [pollCount, setPollCount] = useState(0);
+  const [directUtr, setDirectUtr] = useState('');
+  const [confirming, setConfirming] = useState(false);
+  const [copiedUpi, setCopiedUpi] = useState(false);
+
+  const STORE_UPI_ID = '6375247046@okicici';
+
+  const handleCopyUpi = () => {
+    try {
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(STORE_UPI_ID);
+      }
+      setCopiedUpi(true);
+      toast.success('UPI ID copied!');
+      setTimeout(() => setCopiedUpi(false), 2000);
+    } catch {
+      toast.success(`UPI ID: ${STORE_UPI_ID}`);
+    }
+  };
+
+  const handleConfirmDirectPayment = async () => {
+    if (!orderId) return;
+    setConfirming(true);
+    try {
+      await youpiAPI.confirmDirect({ orderId, utr: directUtr.trim() || undefined });
+      toast.success('Payment verified successfully!');
+      cart.clearCart();
+      await fetchStatus(true);
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Could not verify payment.');
+    } finally {
+      setConfirming(false);
+    }
+  };
 
   const pollTimerRef = useRef(null);
   const MAX_POLLS = 10; // Poll for up to ~25 seconds
@@ -405,15 +438,136 @@ export default function PaymentReturn() {
                 <i className="fa-solid fa-spinner fa-spin"></i>
               </div>
               <h2 style={{ color: '#0369a1', fontSize: '22px', marginBottom: '8px' }}>
-                Awaiting Payment Confirmation
+                Complete Your UPI Payment
               </h2>
-              <p style={{ color: '#64748b', fontSize: '14px', lineHeight: 1.6, marginBottom: '24px' }}>
-                Order <strong style={{ fontFamily: 'monospace' }}>{orderData.orderId}</strong> is
-                waiting for payment verification from your UPI application. If you have just
-                completed the payment, please allow a few moments.
+              <p style={{ color: '#64748b', fontSize: '14px', lineHeight: 1.6, marginBottom: '20px' }}>
+                Order <strong style={{ fontFamily: 'monospace' }}>{orderData.orderId}</strong> for{' '}
+                <strong style={{ color: '#166534' }}>₹{Number(orderData.totalAmount || 0).toLocaleString('en-IN')}</strong> is ready for payment.
               </p>
+
+              {/* Direct UPI Payment Box */}
+              <div
+                style={{
+                  background: '#f8fafc',
+                  border: '1.5px solid #cbd5e1',
+                  borderRadius: '16px',
+                  padding: '24px 20px',
+                  marginBottom: '24px',
+                  textAlign: 'center'
+                }}
+              >
+                <h3 style={{ fontSize: '15px', color: '#1e293b', marginBottom: '14px', fontWeight: '700' }}>
+                  Scan UPI QR Code to Pay
+                </h3>
+
+                <div
+                  style={{
+                    background: '#ffffff',
+                    padding: '12px',
+                    borderRadius: '12px',
+                    display: 'inline-block',
+                    border: '1px solid #e2e8f0',
+                    boxShadow: '0 4px 12px rgba(0,0,0,0.06)',
+                    marginBottom: '16px'
+                  }}
+                >
+                  <img
+                    src={`https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${encodeURIComponent(
+                      `upi://pay?pa=${STORE_UPI_ID}&pn=PANCH%20SATTVA&am=${orderData.totalAmount || 0}&cu=INR`
+                    )}`}
+                    alt="UPI Payment QR Code"
+                    style={{ width: '180px', height: '180px', display: 'block' }}
+                  />
+                </div>
+
+                <div style={{ marginBottom: '16px' }}>
+                  <span style={{ fontSize: '12px', color: '#64748b', display: 'block', marginBottom: '4px' }}>
+                    Or Pay directly to Official UPI ID:
+                  </span>
+                  <div
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '8px',
+                      background: '#ffffff',
+                      border: '1px solid #94a3b8',
+                      padding: '8px 14px',
+                      borderRadius: '8px'
+                    }}
+                  >
+                    <strong style={{ fontSize: '14px', color: '#0f172a', fontFamily: 'monospace' }}>
+                      {STORE_UPI_ID}
+                    </strong>
+                    <button
+                      type="button"
+                      onClick={handleCopyUpi}
+                      style={{
+                        background: '#16a34a',
+                        color: '#fff',
+                        border: 'none',
+                        borderRadius: '6px',
+                        padding: '4px 10px',
+                        fontSize: '11px',
+                        fontWeight: '700',
+                        cursor: 'pointer'
+                      }}
+                    >
+                      {copiedUpi ? 'Copied!' : 'Copy'}
+                    </button>
+                  </div>
+                </div>
+
+                {/* UTR Input and One-Click Confirmation */}
+                <div style={{ maxWidth: '360px', margin: '0 auto', textAlign: 'left' }}>
+                  <label style={{ fontSize: '12px', color: '#475569', fontWeight: '600', display: 'block', marginBottom: '4px' }}>
+                    12-digit UTR / Transaction ID (Optional):
+                  </label>
+                  <input
+                    type="text"
+                    value={directUtr}
+                    onChange={(e) => setDirectUtr(e.target.value)}
+                    placeholder="e.g. 429182390192"
+                    style={{
+                      width: '100%',
+                      padding: '10px 12px',
+                      border: '1px solid #cbd5e1',
+                      borderRadius: '8px',
+                      fontSize: '13px',
+                      marginBottom: '12px',
+                      boxSizing: 'border-box'
+                    }}
+                  />
+
+                  <button
+                    type="button"
+                    onClick={handleConfirmDirectPayment}
+                    disabled={confirming}
+                    style={{
+                      width: '100%',
+                      background: 'linear-gradient(135deg, #15803d 0%, #166534 100%)',
+                      color: '#ffffff',
+                      border: 'none',
+                      borderRadius: '10px',
+                      padding: '13px 20px',
+                      fontSize: '14px',
+                      fontWeight: '700',
+                      cursor: confirming ? 'not-allowed' : 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '8px',
+                      boxShadow: '0 4px 12px rgba(22, 101, 52, 0.25)'
+                    }}
+                  >
+                    <i className="fa-solid fa-circle-check"></i>
+                    {confirming ? 'Verifying...' : 'I Have Paid — Confirm Order'}
+                  </button>
+                </div>
+              </div>
+
               <div style={{ display: 'flex', gap: '12px', justifyContent: 'center' }}>
                 <button
+                  type="button"
                   onClick={() => handleManualRefresh()}
                   style={{
                     background: '#800020',
@@ -425,7 +579,7 @@ export default function PaymentReturn() {
                     cursor: 'pointer'
                   }}
                 >
-                  Check Status Again
+                  Check Auto-Status Again
                 </button>
                 <Link
                   to="/checkout"

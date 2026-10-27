@@ -5,6 +5,8 @@ import { startCloudflaredSafely } from '../packages/common/src/tunnel-command.js
 
 if (!process.env.YOUPI_MODE) process.env.YOUPI_MODE = 'localhost';
 if (!process.env.NODE_ENV) process.env.NODE_ENV = 'development';
+if (!process.env.YOUPI_ALLOW_LOCALHOST_MODE) process.env.YOUPI_ALLOW_LOCALHOST_MODE = 'true';
+if (!process.env.YOUPI_ENFORCE_OBSERVER_HEALTH) process.env.YOUPI_ENFORCE_OBSERVER_HEALTH = 'false';
 
 console.log('====================================================');
 console.log('🚀 Starting YOUPI PG (Development / Localhost Mode)');
