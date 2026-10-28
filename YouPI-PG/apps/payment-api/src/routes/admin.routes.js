@@ -282,12 +282,12 @@ export function registerAdminRoutes(server, ctx) {
       return;
     }
 
-    if ([PaymentStatus.SUCCESS, PaymentStatus.FAILED, PaymentStatus.EXPIRED, PaymentStatus.CANCELLED].includes(session.status)) {
-      HttpServer.json(res, 409, { error: `Cannot confirm a payment in terminal status '${session.status}'.` });
+    if (session.status === PaymentStatus.SUCCESS) {
+      HttpServer.json(res, 409, { error: 'Payment is already confirmed as SUCCESS.' });
       return;
     }
 
-    const updated = ctx.sessionRepo.transitionToTerminal(paymentId, PaymentStatus.SUCCESS);
+    const updated = ctx.sessionRepo.transitionToTerminal(paymentId, PaymentStatus.SUCCESS, { force: true });
 
     if (ctx.auditRepo) {
       ctx.auditRepo.log({

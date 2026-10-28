@@ -2070,22 +2070,14 @@
           }
 
           // Initialize button hidden until 4:00 has elapsed
-          if (btnContinue && remainingSec > 240) {
-            btnContinue.style.display = 'none';
-          } else if (btnContinue) {
-            btnContinue.style.display = 'block';
-          }
+          if (btnContinue) { btnContinue.style.display = 'block'; }
 
           runCountdown(remainingSec, sec => {
             const tText = document.getElementById('activeTimerText');
             if (tText) tText.textContent = formatTime(sec);
 
             // "Payment Done — Check My Payment" button appears after 4:00
-            if (sec <= 240 && btnContinue) {
-              btnContinue.style.display = 'block';
-            } else if (btnContinue) {
-              btnContinue.style.display = 'none';
-            }
+            if (btnContinue) { btnContinue.style.display = 'block'; }
           }, () => {
             const tText = document.getElementById('activeTimerText');
             if (tText) tText.textContent = 'Expired';

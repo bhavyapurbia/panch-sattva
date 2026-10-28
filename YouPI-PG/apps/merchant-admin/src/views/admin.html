@@ -4500,7 +4500,12 @@
         content.innerHTML = `
         <div style="font-size:1.75rem; font-weight:800; color:var(--info);">₹${(Number(currentSlot.amountPaise) / 100).toFixed(2)}</div>
         <div style="font-weight:700; margin:0.35rem 0;">Order #${escapeHtml(currentSlot.orderId)}</div>
-        <div class="badge badge-info">ACTIVE (⏱ ${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')} remaining)</div>
+        <div class="badge badge-info" style="margin-bottom:0.75rem;">ACTIVE (⏱ ${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')} remaining)</div>
+        <div style="margin-top:0.5rem; display:flex; gap:0.5rem;">
+          <button class="btn btn-success" style="flex:1; padding:0.6rem; font-weight:700; font-size:0.88rem;" onclick="manualConfirmSlot(${jsArg(currentSlot.id)}, ${jsArg(currentSlot.orderId)})">
+            ✓ Approve Payment (Confirm &amp; Fulfill)
+          </button>
+        </div>
       `;
       } else {
         box.className = 'slot-card';
@@ -4519,7 +4524,12 @@
         content.innerHTML = `
         <div style="font-size:1.75rem; font-weight:800; color:var(--warning);">₹${(Number(currentSlot.amountPaise) / 100).toFixed(2)}</div>
         <div style="font-weight:700; margin:0.35rem 0;">Order #${escapeHtml(currentSlot.orderId)}</div>
-        <div class="badge badge-warning">VERIFYING (⏳ ${remainingSec}s remaining)</div>
+        <div class="badge badge-warning" style="margin-bottom:0.75rem;">VERIFYING (⏳ ${remainingSec}s remaining)</div>
+        <div style="margin-top:0.5rem; display:flex; gap:0.5rem;">
+          <button class="btn btn-success" style="flex:1; padding:0.6rem; font-weight:700; font-size:0.88rem;" onclick="manualConfirmSlot(${jsArg(currentSlot.id)}, ${jsArg(currentSlot.orderId)})">
+            ✓ Approve Payment (Confirm &amp; Fulfill)
+          </button>
+        </div>
       `;
       } else {
         box.className = 'slot-card';
@@ -4577,6 +4587,30 @@
       if (kPending) kPending.textContent = pendingCounter;
       if (kSingle) kSingle.textContent = singleVerify;
       if (kDual) kDual.textContent = dualVerify;
+    }
+
+    async function manualConfirmSlot(paymentId, orderId) {
+      const utr = prompt(`Confirm payment for Order #${orderId}?\n\nEnter 12-digit UPI UTR / Ref No (or leave blank if already verified):`, '');
+      if (utr === null) return;
+      try {
+        const res = await fetch(`${API_BASE}/api/v1/admin/payments/${paymentId}/confirm`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            operatorId: 'Merchant Supervisor',
+            notes: utr ? `Approved by supervisor (UTR: ${utr})` : 'Approved by supervisor via Merchant Panel'
+          })
+        });
+        if (res.ok) {
+          showAdminToast(`Order #${orderId} approved successfully!`);
+          fetchLiveData();
+        } else {
+          const err = await res.json();
+          alert(err.error || 'Failed to approve payment');
+        }
+      } catch (e) {
+        alert('Network error approving payment: ' + e.message);
+      }
     }
 
     async function promptClearAllQueue() {

@@ -259,7 +259,7 @@ export class PaymentSessionRepository {
       if (!TERMINAL_STATES.includes(targetStatus)) {
         throw new Error(`Not a terminal target status: ${targetStatus}`);
       }
-      if (!isValidTransition(session.status, targetStatus)) {
+      if (!options.force && !isValidTransition(session.status, targetStatus)) {
         throw new Error(`Illegal payment state transition: cannot move from '${session.status}' to '${targetStatus}'.`);
       }
 

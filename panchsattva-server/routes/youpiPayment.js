@@ -548,17 +548,15 @@ router.post('/webhook', async (req, res) => {
         break;
 
       case 'SUCCESS':
-        // ✅ COD or counter payment completed.
-        // Note: For UPI, the gateway emits OBSERVED_SUCCESS / RECONCILED.
-        if (isCod) {
-          order.paymentStatus = 'paid';
-          order.orderStatus = 'confirmed';
-          order.paymentConfirmedAt = order.paymentConfirmedAt || new Date();
-          await deductOrderStock(order);
-        }
+        // Payment confirmed (Admin approval, counter payment, or COD)
+        order.paymentStatus = 'paid';
+        order.orderStatus = 'confirmed';
+        order.paymentConfirmedAt = order.paymentConfirmedAt || new Date();
         order.youpiEvent = 'SUCCESS';
         order.youpiDeliveryId = resolvedDeliveryId;
         if (paymentId) order.youpiPaymentId = paymentId;
+        if (utr) order.utr = utr;
+        await deductOrderStock(order);
         break;
 
       case 'MANUAL_REVIEW':
